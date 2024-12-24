@@ -1618,6 +1618,8 @@ static void do_pause(void)
 		error(_("pause push error: %s"), snd_strerror(err));
 		return;
 	}
+	fprintf(stderr, _("\r=== PAUSE ===                                                            "));
+	fflush(stderr);
 	while (1) {
 		b = wait_for_input();
 		if (b == ' ' || b == '\r') {
@@ -1642,8 +1644,6 @@ static void check_stdin(void)
 		while (read(fileno(stdin), &b, 1) == 1) {
 			if (b == ' ' || b == '\r') {
 				while (read(fileno(stdin), &b, 1) == 1);
-				fprintf(stderr, _("\r=== PAUSE ===                                                            "));
-				fflush(stderr);
 				do_pause();
 				fprintf(stderr, "                                                                          \r");
 				fflush(stderr);
@@ -2719,11 +2719,11 @@ static void begin_wave(int fd, size_t cnt)
 	case SND_PCM_FORMAT_S16_LE:
 		bits = 16;
 		break;
+	case SND_PCM_FORMAT_S24_LE: /* S24_LE is 24 bits stored in 32 bit width with 8 bit padding */
 	case SND_PCM_FORMAT_S32_LE:
-        case SND_PCM_FORMAT_FLOAT_LE:
+	case SND_PCM_FORMAT_FLOAT_LE:
 		bits = 32;
 		break;
-	case SND_PCM_FORMAT_S24_LE:
 	case SND_PCM_FORMAT_S24_3LE:
 		bits = 24;
 		break;
