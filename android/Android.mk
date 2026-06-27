@@ -1,5 +1,6 @@
 #
 # Copyright (C) 2019-2021 The Android-x86 Open Source Project
+# Copyright (C) 2026 BlissLabs
 #
 # Licensed under the GNU General Public License Version 2 or later.
 # You may not use this file except in compliance with the License.
@@ -22,7 +23,7 @@ intermediates := $(call local-generated-sources-dir)
 GEN := $(intermediates)/version.h
 $(GEN): $(LOCAL_PATH)configure.ac
 	@mkdir -p $(@D); \
-	sed -n "/^AC_INIT.* \([0-9.]*\))/s//\#define SND_UTIL_VERSION_STR \"\1\"/p" $< > $@
+	sed -n "s/.*AC_INIT.*, *\\[*\\([0-9.]*\\)\\]*).*/\\#define SND_UTIL_VERSION_STR \\\"\\1\\\"/p" $< > $@
 
 LOCAL_GENERATED_SOURCES := $(GEN)
 
