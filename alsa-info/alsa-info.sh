@@ -34,7 +34,15 @@ PATH="$PATH:/bin:/system/bin:/vendor/bin:/system/vendor/bin"
 BGTITLE="ALSA-Info v $SCRIPT_VERSION"
 PASTEBINKEY='C9cRIO8m/9y8Cs0nVs0FraRx7U0pHsuc'
 
-WGET="$(command -v busybox wget)"
+CURL="$(command -v curl)"
+WGET="$(command -v wget)"
+if [ -z "$WGET" ] && command -v busybox >/dev/null 2>&1; then
+	WGET="busybox wget"
+elif [ -n "$WGET" ] && command -v busybox >/dev/null 2>&1 && busybox | grep -q 1.36; then
+	if $WGET --help 2>&1 | grep -i -q toybox; then
+		WGET="busybox wget"
+	fi
+fi
 REQUIRES="mktemp grep pgrep awk date uname cat sort dmesg amixer alsactl"
 
 #
@@ -42,10 +50,14 @@ REQUIRES="mktemp grep pgrep awk date uname cat sort dmesg amixer alsactl"
 #
 
 update() {
-	test -z "$WGET" || test ! -x "$WGET" && return
+	if [ -z "$CURL" ] && [ -z "$WGET" ]; then return; fi
 
 	SHFILE=$(mktemp -t alsa-info.XXXXXXXXXX) || exit 1
-	busybox wget -O $SHFILE "https://www.alsa-project.org/alsa-info.sh" >/dev/null 2>&1
+	if [ -n "$CURL" ]; then
+		$CURL -sL -o $SHFILE "https://www.alsa-project.org/alsa-info.sh" >/dev/null 2>&1
+	else
+		$WGET -O $SHFILE "https://www.alsa-project.org/alsa-info.sh" >/dev/null 2>&1
+	fi
 	REMOTE_VERSION=$(grep SCRIPT_VERSION $SHFILE | head -n1 | sed 's/.*=//')
 	if [ -s "$SHFILE" ] && [ "$REMOTE_VERSION" != "$SCRIPT_VERSION" ]; then
 		if [[ -n $DIALOG ]]
@@ -882,27 +894,34 @@ if [ -z "$WITHALL" ]; then
 	withall
 fi
 
-# Check if wget is installed, and supports --post-file.
-# HACK : Temporary check to see if the system has busybox 1.36.x, which include wget applet
-# that supports --post-file. This need to be fixed in the future. 
-if ! busybox | grep 1.36 ; then
-	# We couldn't find a suitable wget. If --upload was passed, tell the user to upload manually.
+# Check if curl or wget is installed, and supports POST.
+CAN_UPLOAD=no
+if [ -n "$CURL" ]; then
+	CAN_UPLOAD=yes
+elif [ -n "$WGET" ]; then
+	if $WGET --help 2>/dev/null | grep -q post-file || (command -v busybox >/dev/null 2>&1 && busybox | grep -q 1.36); then
+		CAN_UPLOAD=yes
+	fi
+fi
+
+if [ "$CAN_UPLOAD" = no ]; then
+	# We couldn't find a suitable curl or wget. If --upload was passed, tell the user to upload manually.
 	if [ "$UPLOAD" != yes ]; then
 		:
 	elif [ -n "$DIALOG" ]; then
 		if [ -z "$PASTEBIN" ]; then
-			dialog --backtitle "$BGTITLE" --msgbox "Could not automatically upload output to 'https://www.alsa-project.org'.\nPossible reasons are:\n\n    1. Couldn't find 'wget' in your PATH\n    2. Your version of wget is less than 1.8.2\n    3. If you are using Android, you should use busybox 1.36+ wget from busybox-ndk Magisk module\n\nPlease manually upload $NFILE to 'https://www.alsa-project.org/cardinfo-db' and submit your post." 25 100
+			dialog --backtitle "$BGTITLE" --msgbox "Could not automatically upload output to 'https://www.alsa-project.org'.\nPossible reasons are:\n\n    1. Couldn't find 'curl' or 'wget' in your PATH\n    2. Your version of wget does not support --post-file\n    3. If you are using Android, make sure AOSP 'curl' is installed or use busybox 1.36+ wget\n\nPlease manually upload $NFILE to 'https://www.alsa-project.org/cardinfo-db' and submit your post." 25 100
 		else
-			dialog --backtitle "$BGTITLE" --msgbox "Could not automatically upload output to 'https://www.pastebin.ca'.\nPossible reasons are:\n\n    1. Couldn't find 'wget' in your PATH\n    2. Your version of wget is less than 1.8.2\n    3. If you are using Android, you should use busybox 1.36+ wget from busybox-ndk Magisk module\n\nPlease manually upload $NFILE to 'https://www.pastebin.ca/upload.php' and submit your post." 25 100
+			dialog --backtitle "$BGTITLE" --msgbox "Could not automatically upload output to 'https://www.pastebin.ca'.\nPossible reasons are:\n\n    1. Couldn't find 'curl' or 'wget' in your PATH\n    2. Your version of wget does not support --post-file\n    3. If you are using Android, make sure AOSP 'curl' is installed or use busybox 1.36+ wget\n\nPlease manually upload $NFILE to 'https://www.pastebin.ca/upload.php' and submit your post." 25 100
 		fi
 	else
 		if [ -z "$PASTEBIN" ]; then
 			echo ""
 			echo "Could not automatically upload output to 'https://www.alsa-project.org'"
 			echo "Possible reasons are:"
-			echo "    1. Couldn't find 'wget' in your PATH"
-			echo "    2. Your version of wget is less than 1.8.2"
-			echo "	  3. If you are using Android, you should use busybox 1.36+ wget from busybox-ndk Magisk modules"
+			echo "    1. Couldn't find 'curl' or 'wget' in your PATH"
+			echo "    2. Your version of wget does not support --post-file"
+			echo "    3. If you are using Android, make sure AOSP 'curl' is installed or use busybox 1.36+ wget"
 			echo ""
 			echo "Please manually upload $NFILE to 'https://www.alsa-project.org/cardinfo-db' and submit your post."
 			echo ""
@@ -910,9 +929,9 @@ if ! busybox | grep 1.36 ; then
 			echo ""
 			echo "Could not automatically upload output to 'https://www.pastebin.ca'"
 			echo "Possible reasons are:"
-			echo "    1. Couldn't find 'wget' in your PATH"
-			echo "    2. Your version of wget is less than 1.8.2"
-			echo "	  3. If you are using Android, you should use busybox 1.36+ wget from busybox-ndk Magisk modules"
+			echo "    1. Couldn't find 'curl' or 'wget' in your PATH"
+			echo "    2. Your version of wget does not support --post-file"
+			echo "    3. If you are using Android, make sure AOSP 'curl' is installed or use busybox 1.36+ wget"
 			echo ""
 			echo "Please manually upload $NFILE to 'https://www.pastebin.ca/upload.php' and submit your post."
 			echo ""
@@ -967,10 +986,18 @@ else
 	echo -n "Uploading information to $WWWSERVICE ..."
 fi
 
-if [[ -z "$PASTEBIN" ]]; then
-	busybox wget -O - -T 60 --post-file="$FILE" 'https://www.alsa-project.org/cardinfo-db/' &> "$TEMPDIR/wget.tmp"
+if [ -n "$CURL" ]; then
+	if [[ -z "$PASTEBIN" ]]; then
+		$CURL -s -L --max-time 60 --data-binary @"$FILE" 'https://www.alsa-project.org/cardinfo-db/' &> "$TEMPDIR/wget.tmp"
+	else
+		$CURL -s -L --max-time 60 --data-binary @"$FILE" 'https://pastebin.ca/quiet-paste.php?api='"${PASTEBINKEY}"'&encrypt=t&encryptpw=blahblah' &> "$TEMPDIR/wget.tmp"
+	fi
 else
-	busybox wget -O - -T 60 --post-file="$FILE" 'https://pastebin.ca/quiet-paste.php?api='"${PASTEBINKEY}"'&encrypt=t&encryptpw=blahblah' &> "$TEMPDIR/wget.tmp"
+	if [[ -z "$PASTEBIN" ]]; then
+		$WGET -O - -T 60 --post-file="$FILE" 'https://www.alsa-project.org/cardinfo-db/' &> "$TEMPDIR/wget.tmp"
+	else
+		$WGET -O - -T 60 --post-file="$FILE" 'https://pastebin.ca/quiet-paste.php?api='"${PASTEBINKEY}"'&encrypt=t&encryptpw=blahblah' &> "$TEMPDIR/wget.tmp"
+	fi
 fi
 
 if [ "$?" -ne 0 ]; then
