@@ -314,6 +314,21 @@ get_alsa_library_version() {
 			return
 		fi
 	fi
+
+	if [ -z "$ALSA_LIB_VERSION" ]; then
+		for lib in /system/lib64/libasound.so /system/lib/libasound.so /vendor/lib64/libasound.so /vendor/lib/libasound.so /usr/lib64/libasound.so* /usr/lib/*/libasound.so*; do
+			if [ -f "$lib" ]; then
+				ALSA_LIB_VERSION="$(strings "$lib" 2>/dev/null | grep -E '^1\.[0-9]+\.[0-9]+' | head -n 1)"
+				if [ -z "$ALSA_LIB_VERSION" ]; then
+					ALSA_LIB_VERSION="$(grep -a -o -E '1\.[0-9]+\.[0-9]+' "$lib" 2>/dev/null | head -n 1)"
+				fi
+				[ -n "$ALSA_LIB_VERSION" ] && break
+			fi
+		done
+		if [ -z "$ALSA_LIB_VERSION" ] && command -v amixer >/dev/null 2>&1; then
+			ALSA_LIB_VERSION="$(amixer -v 2>/dev/null | awk '{ print $3 }')"
+		fi
+	fi
 }
 
 # Basic requires
@@ -427,6 +442,14 @@ fi
 # Fetch the info and store in temp files/variables
 TSTAMP=$(LANG=C TZ=UTC date)
 DISTRO=$(grep -ihs "buntu\|SUSE\|Fedora\|PCLinuxOS\|MEPIS\|Mandriva\|Debian\|Damn\|Sabayon\|Slackware\|KNOPPIX\|Gentoo\|Zenwalk\|Mint\|Kubuntu\|FreeBSD\|Puppy\|Freespire\|Vector\|Dreamlinux\|CentOS\|Arch\|Xandros\|Elive\|SLAX\|Red\|BSD\|KANOTIX\|Nexenta\|Foresight\|GeeXboX\|Frugalware\|64\|SystemRescue\|Novell\|Solaris\|BackTrack\|KateOS\|Pardus\|ALT" /etc/issue /etc/*release /etc/*version)
+if [ -z "$DISTRO" ] && command -v getprop >/dev/null 2>&1; then
+	ANDROID_REL="$(getprop ro.build.version.release)"
+	ANDROID_ID="$(getprop ro.build.display.id)"
+	ANDROID_FLAVOR="$(getprop ro.build.flavor)"
+	if [ -n "$ANDROID_REL" ]; then
+		DISTRO="Android $ANDROID_REL ($ANDROID_ID ${ANDROID_FLAVOR:-})"
+	fi
+fi
 KERNEL_RELEASE=$(uname -r)
 KERNEL_MACHINE=$(uname -m)
 KERNEL_PROCESSOR=$(uname -p)
@@ -444,6 +467,7 @@ ARTSINST=$(command -v artsd)
 JACKINST=$(command -v jackd)
 JACK2INST=$(command -v jackdbus)
 ROARINST=$(command -v roard)
+ASINST=$(command -v audioserver)
 DMIDECODE=$(command -v dmidecode)
 
 #Check for DMI data
@@ -640,7 +664,14 @@ echo "      Installed - Yes ($ROARINST)" >> $FILE
 echo "      Running - $ROARRUNNING" >> $FILE
 echo "" >> $FILE
 fi
-if [[ -z "$PAINST" && -z "$ESDINST" && -z "$ARTSINST" && -z "$JACKINST" && -z "$ROARINST" ]];then
+if [[ -n $ASINST ]];then
+[[ $(pgrep '^(.*/)?audioserver$') ]] && ASRUNNING="Yes" || ASRUNNING="No"
+echo "Android AudioServer:" >> $FILE
+echo "      Installed - Yes ($ASINST)" >> $FILE
+echo "      Running - $ASRUNNING" >> $FILE
+echo "" >> $FILE
+fi
+if [[ -z "$PAINST" && -z "$ESDINST" && -z "$ARTSINST" && -z "$JACKINST" && -z "$ROARINST" && -z "$PWINST" && -z "$ASINST" ]];then
 echo "No sound servers found." >> $FILE
 echo "" >> $FILE
 fi
