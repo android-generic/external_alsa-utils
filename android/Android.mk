@@ -83,6 +83,7 @@ LOCAL_CFLAGS := $(ALSA_UTILS_CFLAGS) \
 
 LOCAL_SRC_FILES := $(addprefix alsactl/,\
 	alsactl.c \
+	boot_params.c \
 	clean.c \
 	daemon.c \
 	info.c \
@@ -91,7 +92,9 @@ LOCAL_SRC_FILES := $(addprefix alsactl/,\
 	lock.c \
 	monitor.c \
 	state.c \
-	utils.c)
+	utils.c \
+	export.c \
+	wait.c )
 
 LOCAL_MODULE := alsa_ctl
 LOCAL_SHARED_LIBRARIES := libasound
