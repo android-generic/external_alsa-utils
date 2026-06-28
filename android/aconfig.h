@@ -2,7 +2,14 @@
 /* include/aconfig.h.in.  Generated from configure.ac by autoheader.  */
 
 /* directory containing alsa configuration */
-#define DATADIR "/system/usr/share/alsa"
+#define DATADIR "/vendor/usr/share/alsa"
+
+/* directory containing ALSA topology pre-process plugins */
+#ifdef __LP64__
+#define ALSA_TOPOLOGY_PLUGIN_DIR "/vendor/lib64/alsa-topology"
+#else
+#define ALSA_TOPOLOGY_PLUGIN_DIR "/vendor/lib/alsa-topology"
+#endif
 
 /* Define to 1 if translation of program messages to the user's native
    language is requested. */
@@ -135,7 +142,7 @@
 #define PACKAGE_URL ""
 
 /* directory containing sample data */
-#define SOUNDSDIR "/system/usr/share/sounds/alsa"
+#define SOUNDSDIR "/vendor/usr/share/sounds/alsa"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1

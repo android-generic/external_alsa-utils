@@ -1,0 +1,156 @@
+//
+// Copyright (C) 2019-2021 The Android-x86 Open Source Project
+// Copyright (C) 2026 BlissLabs
+//
+// Licensed under the GNU General Public License Version 2 or later.
+//
+
+genrule {
+    name: "alsa_utils_version_h",
+    srcs: ["configure.ac"],
+    out: ["version.h"],
+    cmd: "sed -n 's/.*AC_INIT.*, *\\[*\\([0-9.]*\\)\\]*).*/#define SND_UTIL_VERSION_STR \"\\1\"/p' $(in) > $(out)",
+}
+
+cc_library_headers {
+    name: "alsa_utils_headers",
+    vendor: true,
+    export_include_dirs: [
+        "include",
+        "android",
+    ],
+    generated_headers: ["alsa_utils_version_h"],
+    export_generated_headers: ["alsa_utils_version_h"],
+}
+
+cc_defaults {
+    name: "alsa_utils_defaults",
+    vendor: true,
+    c_std: "gnu11",
+    cflags: [
+        "-Wno-absolute-value",
+        "-Wno-enum-conversion",
+        "-Wno-macro-redefined",
+        "-Wno-missing-field-initializers",
+        "-Wno-parentheses",
+        "-Wno-pointer-arith",
+        "-Wno-sign-compare",
+        "-Wno-typedef-redefinition",
+        "-Wno-gnu-variable-sized-type-not-at-end",
+        "-Wno-unused-parameter",
+        "-Wno-unused-variable",
+        "-D_GNU_SOURCE",
+    ],
+    header_libs: ["alsa_utils_headers"],
+    shared_libs: ["libasound"],
+}
+
+cc_binary {
+    name: "alsa_amixer",
+    defaults: ["alsa_utils_defaults"],
+    srcs: ["amixer/*.c"],
+    symlinks: ["amixer"],
+}
+
+cc_binary {
+    name: "alsa_aplay",
+    defaults: ["alsa_utils_defaults"],
+    srcs: ["aplay/*.c"],
+    symlinks: [
+        "aplay",
+        "arecord",
+    ],
+}
+
+cc_binary {
+    name: "alsa_ctl",
+    defaults: ["alsa_utils_defaults"],
+    cflags: [
+        "-DSYS_ASOUNDRC=\"/data/vendor/asound.state\"",
+        "-DSYS_LOCKPATH=\"/data/local/tmp/\"",
+        "-DSYS_LOCKFILE=\"asound.state.lock\"",
+        "-DSYS_PIDFILE=\"/data/local/tmp/alsactl.pid\"",
+    ],
+    srcs: ["alsactl/*.c"],
+    exclude_srcs: [
+        "alsactl/init_sysdeps.c",
+        "alsactl/init_sysfs.c",
+        "alsactl/init_utils_run.c",
+        "alsactl/init_utils_string.c",
+    ],
+    symlinks: ["alsactl"],
+}
+
+cc_binary {
+    name: "alsa_ucm",
+    defaults: ["alsa_utils_defaults"],
+    srcs: ["alsaucm/*.c"],
+    symlinks: ["alsaucm"],
+}
+
+cc_binary {
+    name: "alsa_loop",
+    defaults: ["alsa_utils_defaults"],
+    srcs: [
+        "alsaloop/alsaloop.c",
+        "alsaloop/control.c",
+        "alsaloop/pcmjob.c",
+    ],
+    symlinks: ["alsaloop"],
+}
+
+cc_binary {
+    name: "alsa_mixer",
+    defaults: ["alsa_utils_defaults"],
+    cflags: [
+        "-DCURSESINC=\"ncurses.h\"",
+    ],
+    srcs: ["alsamixer/*.c"],
+    shared_libs: ["libncurses"],
+    static_libs: [
+        "libmenu",
+        "libpanel",
+        "libform",
+    ],
+    symlinks: ["alsamixer"],
+}
+
+cc_binary {
+    name: "alsa_iecset",
+    defaults: ["alsa_utils_defaults"],
+    cflags: [
+        "-g",
+        "-Wall",
+    ],
+    srcs: ["iecset/*.c"],
+    symlinks: ["iecset"],
+}
+
+sh_binary {
+    name: "alsa-info.sh",
+    src: "alsa-info/alsa-info.sh",
+    vendor: true,
+}
+
+cc_binary {
+    name: "alsa_tplg",
+    defaults: ["alsa_utils_defaults"],
+    srcs: ["topology/*.c"],
+    symlinks: ["alsatplg"],
+}
+
+cc_library_shared {
+    name: "libalsatplg_module_nhlt",
+    defaults: ["alsa_utils_defaults"],
+    srcs: [
+        "topology/nhlt/*.c",
+        "topology/nhlt/intel/*.c",
+        "topology/nhlt/intel/dmic/*.c",
+        "topology/nhlt/intel/ssp/*.c",
+    ],
+    local_include_dirs: [
+        "topology",
+        "topology/nhlt",
+    ],
+    relative_install_path: "alsa-topology",
+}
