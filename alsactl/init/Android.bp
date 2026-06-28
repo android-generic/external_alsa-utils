@@ -1,0 +1,72 @@
+// Copyright (C) 2026 BlissLabs
+//
+// Licensed under the GNU General Public License Version 2 or later.
+
+prebuilt_usr_share {
+    name: "alsa_ctl_init_00main",
+    src: "00main",
+    sub_dir: "alsa/init",
+    filename_from_src: true,
+    vendor: true,
+}
+
+prebuilt_usr_share {
+    name: "alsa_ctl_init_default",
+    src: "default",
+    sub_dir: "alsa/init",
+    filename_from_src: true,
+    vendor: true,
+}
+
+prebuilt_usr_share {
+    name: "alsa_ctl_init_help",
+    src: "help",
+    sub_dir: "alsa/init",
+    filename_from_src: true,
+    vendor: true,
+}
+
+prebuilt_usr_share {
+    name: "alsa_ctl_init_info",
+    src: "info",
+    sub_dir: "alsa/init",
+    filename_from_src: true,
+    vendor: true,
+}
+
+prebuilt_usr_share {
+    name: "alsa_ctl_init_test",
+    src: "test",
+    sub_dir: "alsa/init",
+    filename_from_src: true,
+    vendor: true,
+}
+
+prebuilt_usr_share {
+    name: "alsa_ctl_init_hda",
+    src: "hda",
+    sub_dir: "alsa/init",
+    filename_from_src: true,
+    vendor: true,
+}
+
+prebuilt_usr_share {
+    name: "alsa_ctl_init_ca0106",
+    src: "ca0106",
+    sub_dir: "alsa/init",
+    filename_from_src: true,
+    vendor: true,
+}
+
+phony {
+    name: "alsa_ctl_init_config",
+    required: [
+        "alsa_ctl_init_00main",
+        "alsa_ctl_init_default",
+        "alsa_ctl_init_help",
+        "alsa_ctl_init_info",
+        "alsa_ctl_init_test",
+        "alsa_ctl_init_hda",
+        "alsa_ctl_init_ca0106",
+    ],
+}
